@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/styles.css" rel="stylesheet">
+    <title>Notaría 105 - Acceso a Clientes</title>
+</head>
+<body class="bg-light">
+
+    <div id="navbar-container"></div>
+
+    <main class="container">
+        <div class="row justify-content-center mt-5">
+            <div class="col-md-5">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <h3 class="card-title text-center mb-4 text-primary">Consulta tu Trámite</h3>
+
+                        <div id="alertaError" class="alert alert-danger d-none"></div>
+
+                        <form id="formLoginCliente">
+                            <div class="mb-3">
+                                <label class="form-label">Correo Electrónico Registrado</label>
+                                <input type="email" id="email" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">CURP</label>
+                                <input type="text" id="curp" class="form-control" required style="text-transform: uppercase;">
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Consultar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <small>&copy; 2026 - Notaría 105, bases de datos.</small>
+    </footer>
+
+    <script src="js/db.js"></script>
+    <script src="js/nav.js"></script>
+    <script>
+        seedSiVacia().then(renderNavbar);
+
+        document.getElementById("formLoginCliente").addEventListener("submit", (e) => {
+            e.preventDefault();
+            const email = document.getElementById("email").value.trim();
+            const curp = document.getElementById("curp").value.trim();
+
+            const resultado = loginCliente(email, curp);
+            const alerta = document.getElementById("alertaError");
+
+            if (resultado.ok) {
+                window.location.href = "portal_cliente.html";
+            } else {
+                alerta.textContent = resultado.error;
+                alerta.classList.remove("d-none");
+            }
+        });
+    </script>
+</body>
+</html>

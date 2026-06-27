@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/styles.css" rel="stylesheet">
+    <title>Notaría 105 - Registro de Clientes</title>
+</head>
+<body class="bg-light">
+
+    <div id="navbar-container"></div>
+
+    <main class="container">
+        <div class="row mb-4 align-items-center">
+            <div class="col-md-8">
+                <h2>Módulo de Atención a Clientes</h2>
+                <p class="text-muted">Registro de nuevos ciudadanos en el sistema</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="dashboard.html" class="btn btn-outline-secondary">Volver al Panel</a>
+            </div>
+        </div>
+
+        <div id="mensaje" class="alert alert-info shadow-sm d-none"></div>
+
+        <div class="card shadow border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Datos Personales del Cliente</h5>
+            </div>
+            <div class="card-body">
+                <form id="formCliente">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nombre(s)</label>
+                            <input type="text" id="nombre" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Apellidos</label>
+                            <input type="text" id="apellidos" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">RFC</label>
+                            <input type="text" id="rfc" class="form-control" maxlength="13" required style="text-transform: uppercase;">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">CURP</label>
+                            <input type="text" id="curp" class="form-control" maxlength="18" required style="text-transform: uppercase;">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Correo Electrónico</label>
+                            <input type="email" id="correo" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label">Clave de Elector (INE)</label>
+                            <input type="text" id="ine" class="form-control" maxlength="18" required style="text-transform: uppercase;">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Estado Civil</label>
+                            <select id="estado_civil" class="form-select" required>
+                                <option value="Soltero">Soltero/a</option>
+                                <option value="Casado">Casado/a</option>
+                                <option value="Divorciado">Divorciado/a</option>
+                                <option value="Viudo">Viudo/a</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Ocupación</label>
+                            <input type="text" id="ocupacion" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100">Registrar Cliente</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <small>&copy; 2026 - Notaría 105, bases de datos.</small>
+    </footer>
+
+    <script src="js/db.js"></script>
+    <script src="js/nav.js"></script>
+    <script>
+        const sesion = requireAuth(["Abogado", "Notario"]);
+        if (sesion) renderNavbar();
+
+        document.getElementById("formCliente").addEventListener("submit", (e) => {
+            e.preventDefault();
+
+            const nombre = document.getElementById("nombre").value.trim();
+            const apellidos = document.getElementById("apellidos").value.trim();
+            const rfc = document.getElementById("rfc").value.trim().toUpperCase();
+            const curp = document.getElementById("curp").value.trim().toUpperCase();
+            const correo = document.getElementById("correo").value.trim();
+            const ine = document.getElementById("ine").value.trim().toUpperCase();
+            const estado_civil = document.getElementById("estado_civil").value;
+            const ocupacion = document.getElementById("ocupacion").value.trim();
+
+            const db = getDB();
+            const mensajeDiv = document.getElementById("mensaje");
+
+            const repetido =
+                db.personas.some((p) => p.rfc === rfc) ||
+                db.personas.some((p) => p.curp === curp) ||
+                db.correos.some((c) => c.correo === correo) ||
+                db.clientes.some((c) => c.ine === ine);
+
+            if (repetido) {
+                mensajeDiv.classList.remove("d-none", "alert-info");
+                mensajeDiv.classList.add("alert-danger");
+                mensajeDiv.textContent = "Error al registrar: Verifica que el RFC, CURP, INE o Correo no estén repetidos.";
+                return;
+            }
+
+            const nuevoId = db.next_id_persona++;
+            db.personas.push({ id_persona: nuevoId, nombre, apellidos, rfc, curp });
+            db.correos.push({ id_persona: nuevoId, correo });
+            db.clientes.push({ id_persona: nuevoId, ine, estado_civil, ocupacion });
+
+            saveDB(db);
+
+            mensajeDiv.classList.remove("d-none", "alert-danger");
+            mensajeDiv.classList.add("alert-info");
+            mensajeDiv.textContent = "¡Cliente registrado con éxito en el padrón de la Notaría!";
+            document.getElementById("formCliente").reset();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/styles.css" rel="stylesheet">
+    <title>Notaría 105 - Redactar Escritura</title>
+</head>
+<body class="bg-light">
+
+    <div id="navbar-container"></div>
+
+    <main class="container">
+        <div id="mensaje" class="alert alert-danger shadow-sm fw-bold d-none"></div>
+
+        <div class="row mb-4 align-items-center">
+            <div class="col-md-8">
+                <h2>Redacción y Cobro</h2>
+                <p class="text-muted">Folio: <strong id="folioTitulo" class="text-dark"></strong> | Cliente titular: <strong id="clienteTitulo" class="text-primary"></strong></p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="dashboard.html" class="btn btn-outline-secondary">Volver al Panel</a>
+            </div>
+        </div>
+
+        <form id="formEditar">
+            <div class="row">
+                <div class="col-md-8 mb-4">
+                    <div class="card shadow border-dark h-100">
+                        <div class="card-header bg-dark text-white">
+                            <h5 class="mb-0">📝 Documento Legal</h5>
+                        </div>
+                        <div class="card-body">
+                            <label class="form-label text-muted">Redacte el cuerpo de la escritura, contrato o fe de hechos aquí:</label>
+                            <textarea id="texto_legal" class="form-control bg-light" rows="15" placeholder="En la ciudad de..., a los ___ días del mes de..." required></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-4">
+                    <div class="card shadow border-success h-100">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">💰 Registro de Pago</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Costo del Trámite</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-success text-white">$</span>
+                                    <input type="number" step="0.01" id="monto_pagado" class="form-control form-control-lg text-success fw-bold" required>
+                                </div>
+                                <small class="text-muted">Monto total a cobrar por los honorarios.</small>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Método de Pago</label>
+                                <select id="metodo_pago" class="form-select" required>
+                                    <option value="Transferencia">Transferencia Bancaria (SPEI)</option>
+                                    <option value="Tarjeta de Crédito">Tarjeta de Crédito / Débito</option>
+                                    <option value="Efectivo">Efectivo</option>
+                                    <option value="Cheque">Cheque Certificado</option>
+                                </select>
+                            </div>
+                            <hr>
+                            <div class="alert alert-warning small">
+                                Al guardar, el trámite pasará automáticamente al área de firmas <strong>(Pendiente de firma)</strong>.
+                            </div>
+                            <button type="submit" class="btn btn-success btn-lg w-100 mt-2">Guardar y Pasar a Firma</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </main>
+
+    <footer>
+        <small>&copy; 2026 - Notaría 105, bases de datos.</small>
+    </footer>
+
+    <script src="js/db.js"></script>
+    <script src="js/nav.js"></script>
+    <script>
+        const sesion = requireAuth(["Notario"]);
+        const no_escritura = new URLSearchParams(window.location.search).get("folio");
+
+        if (sesion) {
+            renderNavbar();
+
+            const db = getDB();
+            const tramite = db.escrituras.find((e) => e.no_escritura === no_escritura);
+
+            if (!tramite) {
+                document.querySelector("main").innerHTML = `<div class="alert alert-danger mt-4">Trámite no encontrado.</div>`;
+            } else {
+                const solicitante = getSolicitantePrincipal(db, no_escritura);
+                document.getElementById("folioTitulo").textContent = tramite.no_escritura;
+                document.getElementById("clienteTitulo").textContent = solicitante
+                    ? `${solicitante.nombre} ${solicitante.apellidos}`
+                    : "(sin solicitante)";
+                document.getElementById("texto_legal").value = tramite.texto_legal || "";
+                document.getElementById("monto_pagado").value = tramite.costo_total;
+
+                document.getElementById("formEditar").addEventListener("submit", (e) => {
+                    e.preventDefault();
+
+                    const texto_legal = document.getElementById("texto_legal").value;
+                    const metodo_pago = document.getElementById("metodo_pago").value;
+                    const monto_pagado = Number(document.getElementById("monto_pagado").value);
+
+                    const dbActual = getDB();
+                    const idx = dbActual.escrituras.findIndex((e) => e.no_escritura === no_escritura);
+                    if (idx === -1) return;
+
+                    dbActual.escrituras[idx].texto_legal = texto_legal;
+                    dbActual.escrituras[idx].costo_total = monto_pagado;
+                    dbActual.escrituras[idx].estado = "Pendiente de firma";
+
+                    dbActual.pagos.push({
+                        no_escritura,
+                        monto: monto_pagado,
+                        fecha: new Date().toISOString().slice(0, 10),
+                        metodo_pago,
+                    });
+
+                    saveDB(dbActual);
+
+                    window.location.href = `firmar_escritura.html?folio=${no_escritura}`;
+                });
+            }
+        }
+    </script>
+</body>
+</html>
